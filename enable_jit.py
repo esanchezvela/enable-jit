@@ -95,7 +95,7 @@ if headers:
     payload  = json.loads(template.render(data=data))
     
     enable_jit_response = requests.put(enable_jit_uri, headers=headers, json=payload)
-    print(enable_jit_response.json())
+    logging.debug(enable_jit_response.json())
 else:
     exit(1)
 
@@ -113,25 +113,25 @@ if enable_jit_response.status_code == 200:
                               name=machine_name
                      )
 
-    #print(payload)
     initiate_jit_response = requests.post(initiate_jit_uri, headers=headers, json=payload)
-    print(initiate_jit_response.json())
+    logging.debug(initiate_jit_response.json())
 else: 
     logging.error("enable_jit_error")
     logging.error(enable_jit_response.json())
 
 
 if initiate_jit_response.status_code == 202:
-    request_status = requests.get("https://management.azure.com/subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.Security/locations/{location}/jitNetworkAccessPolicies/{name}?api-version=2020-01-01".format(
+    jit_status_uri = "https://management.azure.com/subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.Security/locations/{location}/jitNetworkAccessPolicies/{name}?api-version=2020-01-01".format(
                               subscription=data['subscription_id'],
                               rg=resource_group,
                               location=vm_details.location,
                               name=machine_name
-                     ), headers=headers)
-    print(request_status.json())
+                      )
+    jit_status = requests.get(jit_status_uri, headers=headers)
+    logging.debug(jit_status.json())
 else:
-    print(initiate_jit_response.json())
+    logging.critical(initiate_jit_response.json())
+    exit(1)
 
 exit(0)
-################################################################
 
