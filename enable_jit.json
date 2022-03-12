@@ -1,0 +1,40 @@
+{
+  "properties": {
+    "virtualMachines": [
+      {
+        "id": "{{ data.machine_id }}",
+        "ports": [
+          {
+            "number": {{ data.port_number }},
+            "protocol": "*",
+            "allowedSourceAddressPrefix": "{{ data.my_ip }}",
+            "maxRequestAccessDuration": "PT8H"
+          }
+        ]
+      }
+    ],
+    "requests": [
+      {
+        "justification" : "UserRequested",
+        "requestor": "{{ data.my_id }}",
+        "startTimeUtc": "{{ data.start_time }}Z",
+       
+        "virtualMachines": [
+          {
+            "id": "{{ data.machine_id }}",
+            "ports": [
+              {
+                "number": {{ data.port_number }},
+                "allowedSourceAddressPrefix": "{{ data.my_ip }}",
+                "endTimeUtc": "{{ data.end_time }}Z",
+                "status": "Initiated",
+                "statusReason": "UserRequested"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "Basic"
+}

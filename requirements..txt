@@ -1,0 +1,6 @@
+azure.identity
+azure.mgmt.compute
+jinja2
+argparse
+datetime
+requests

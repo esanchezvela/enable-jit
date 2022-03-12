@@ -1,0 +1,15 @@
+
+{
+  "virtualMachines": [
+    {
+      "id": "{{ data.machine_id }}",
+      "ports": [
+         {
+           "number": {{ data.port_number }},
+           "duration": "PT1H",
+	   "allowedSourceAddresPrefix": "{{ data.my_ip }}"
+         }
+      ]
+    }
+  ]
+}
