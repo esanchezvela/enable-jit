@@ -118,6 +118,7 @@ if enable_jit_response.status_code == 200:
 else: 
     logging.error("enable_jit_error")
     logging.error(enable_jit_response.json())
+    exit(1)
 
 
 if initiate_jit_response.status_code == 202:
