@@ -5,7 +5,6 @@ from azure.mgmt.compute import ComputeManagementClient
 
 from datetime import datetime, timedelta
 from jinja2 import Template
-from dateutil.parser import isoparse
 import requests, json, os
 import logging
 import argparse
