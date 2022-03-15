@@ -58,15 +58,15 @@ parser  = argparse.ArgumentParser()
 parser.add_argument("--rg",      help="Resource Group of server")
 parser.add_argument("--machine", help="Machine name to request JIT")
 parser.add_argument("--ports",   help="List of ports to open for JIT")
-ports = 22
+ports = "22"
 data               = define_vars()
 try:
-    args    = parser.parse_args()
+    args         = parser.parse_args()
+    machine_name = args.machine
     if not args.rg:
-        rg=os.environ["az_resource_group"]
+        resource_group = os.environ["az_resource_group"]
     else:
-        resource_group  = args.rg
-        machine_name    = args.machine
+        resource_group = args.rg
     if args.ports:
         ports = args.ports
 
