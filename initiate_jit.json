@@ -3,13 +3,7 @@
   "virtualMachines": [
     {
       "id": "{{ data.machine_id }}",
-      "ports": [
-         {
-           "number": {{ data.port_number }},
-           "duration": "PT8H",
-	   "allowedSourceAddresPrefix": "{{ data.my_ip }}"
-         }
-      ]
+      "ports": {{ data.initiate_ports }}
     }
   ]
 }

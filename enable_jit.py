@@ -30,7 +30,7 @@ def get_credential(data):
         credential = CertificateCredential(data['tenant_id'], data['client_id'], data['certificate_path'])
         return credential
     except:
-        logging.critical("Unable to get a credential from Azure")
+        logger.critical("Unable to get a credential from Azure")
         exit(1)
 
  
@@ -38,39 +38,70 @@ def get_credential(data):
 def get_header(credential, api_scope):
     try:
         access_token = credential.get_token(api_scope)
-        logging.debug("Successful login using certificates")
-        logging.debug("Access token expires on {}".format(datetime.fromtimestamp(access_token.expires_on).isoformat()))
+        logger.debug("Successful login using certificates")
+        logger.debug("Access token expires on {}".format(datetime.fromtimestamp(access_token.expires_on).isoformat()))
         headers = {   
             "Authorization": "Bearer {}".format(access_token.token), 
             "Content-Type":  "application/json" 
         }
         return headers
     except:
-        logging.critical("Unsuccesful login")
+        logger.critical("Unsuccesful login")
         return {}
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
 
 parser  = argparse.ArgumentParser()
 parser.add_argument("--rg",      help="Resource Group of server")
 parser.add_argument("--machine", help="Machine name to request JIT")
-args    = parser.parse_args()
+parser.add_argument("--ports",   help="List of ports to open for JIT")
+ports = 22
+data               = define_vars()
 try:
+    args    = parser.parse_args()
     if not args.rg:
         rg=os.environ["az_resource_group"]
     else:
         resource_group  = args.rg
         machine_name    = args.machine
+    if args.ports:
+        ports = args.ports
+
+    enable_ports = []
+    initiate_ports = []
+    for port in ports.split(','):
+        enable_port = {}
+        initiate_port = {}
+        enable_port = {
+            "number":  port,
+            "protocol": "*",
+            "allowedSourceAddressPrefix": data['my_ip'],
+            "maxRequestAccessDuration":   "PT8H"
+        }
+        initiate_port = {
+            "number": port,
+            "duration": "PT8H",
+            "allowedSourceAddressPrefix": data['my_ip']
+        }
+        enable_ports.append(enable_port)
+        initiate_ports.append(initiate_port)
+    
+    data["enable_ports"]   = json.dumps(enable_ports)
+    data["initiate_ports"] = json.dumps(initiate_ports)
 except:
     print("Usage: ")
     print(f"       enable_jit.py [--rg resource_group_name ] '{'--machine NAME'}'")
     exit(1)
 
-data               = define_vars()
 credential         = get_credential(data) 
 try:
     compute_client     = ComputeManagementClient(credential, data['subscription_id']) 
     vm_details         = compute_client.virtual_machines.get(resource_group, machine_name)
 except:
-    logging.critical("Unable to get machine details from Azure")
+    logger.critical("Unable to get machine details from Azure")
     exit(1)
 
 headers            = get_header(credential, data['api_scope'])
@@ -95,8 +126,8 @@ if headers:
         try:
             jit_delete = requests.delete(jit_status_uri, headers=headers)
         except:
-            logging.critical("Failed to delete existing JIT policy")
-            logging.critital(jit_delete.text)
+            logger.critical("Failed to delete existing JIT policy")
+            logger.critital(jit_delete.text)
             exit(1)
 
     try:
@@ -111,10 +142,10 @@ if headers:
         template = Template(enable_jit_data)
         payload  = json.loads(template.render(data=data))
         enable_jit_response = requests.put(enable_jit_uri, headers=headers, json=payload)
-        logging.debug(enable_jit_response.json())
+        logger.debug(enable_jit_response.json())
     except:
-        logging.critical("Unable to create/update JIT policy")
-        logging.error(enable_jit_response.json())
+        logger.critical("Unable to create/update JIT policy")
+        logger.error(enable_jit_response.json())
         exit(1)
 
 else:
@@ -132,10 +163,10 @@ try:
                      )
 
     initiate_jit_response = requests.post(initiate_jit_uri, headers=headers, json=payload)
-    logging.debug(initiate_jit_response.json())
+    logger.debug(initiate_jit_response.json())
 except:
-    logging.error("Unable to initiate JIT policy for {machine}".format(machine=machine_name))
-    logging.error(initate_jit_response.json())
+    logger.error("Unable to initiate JIT policy for {machine}".format(machine=machine_name))
+    logger.error(initate_jit_response.json())
     exit(1)
     
 try:
@@ -146,9 +177,9 @@ try:
                               name=machine_name
                       )
     jit_status = requests.get(jit_status_uri, headers=headers)
-    logging.debug(jit_status.json())
+    logger.debug(jit_status.json())
 except:
-    logging.critical(jit_status.text)
+    logger.critical(jit_status.text)
     exit(1)
 
 exit(0)
