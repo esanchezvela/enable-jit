@@ -6,7 +6,7 @@
       "ports": [
          {
            "number": {{ data.port_number }},
-           "duration": "PT1H",
+           "duration": "PT8H",
 	   "allowedSourceAddresPrefix": "{{ data.my_ip }}"
          }
       ]

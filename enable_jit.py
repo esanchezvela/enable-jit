@@ -5,6 +5,7 @@ from azure.mgmt.compute import ComputeManagementClient
 
 from datetime import datetime, timedelta
 from jinja2 import Template
+from dateutil.parser import isoparse
 import requests, json, os
 import logging
 import argparse
@@ -74,35 +75,52 @@ except:
 
 headers            = get_header(credential, data['api_scope'])
 
-
 if headers:
-    now                      = datetime.now()
-    delta                    = timedelta(hours=1)
-    data["start_time"]       = now.utcnow().isoformat()
-    data["end_time"]         = now.utcfromtimestamp(now.timestamp() + delta.seconds).isoformat()
+    now                      = datetime.utcnow()
+    delta                    = timedelta(seconds=1)
+    data["start_time"]       = now.isoformat()
+    data["end_time"]         = now.fromtimestamp(now.timestamp() + delta.seconds).isoformat()
     data["machine_id"]       = vm_details.id
     data["machine_location"] = vm_details.location
 
-    enable_jit_uri = "https://management.azure.com/subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.Security/locations/{location}/jitNetworkAccessPolicies/{name}?api-version=2020-01-01".format(
+    jit_status_uri = "https://management.azure.com/subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.Security/locations/{location}/jitNetworkAccessPolicies/{name}?api-version=2020-01-01".format(
                               subscription=data['subscription_id'],
                               rg=resource_group,
                               location=vm_details.location,
                               name=machine_name
-                     )
+                      )
+    jit_status = requests.get(jit_status_uri, headers=headers)
 
-    enable_jit_data = open("enable_jit.json").read()
-    template = Template(enable_jit_data)
-    payload  = json.loads(template.render(data=data))
-    
-    enable_jit_response = requests.put(enable_jit_uri, headers=headers, json=payload)
-    logging.debug(enable_jit_response.json())
+    if jit_status.status_code != 404:
+        try:
+            jit_delete = requests.delete(jit_status_uri, headers=headers)
+        except:
+            logging.critical("Failed to delete existing JIT policy")
+            logging.critital(jit_delete.text)
+            exit(1)
+
+    try:
+        enable_jit_uri = "https://management.azure.com/subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.Security/locations/{location}/jitNetworkAccessPolicies/{name}?api-version=2020-01-01".format(
+                          subscription=data['subscription_id'],
+                          rg=resource_group,
+                          location=vm_details.location,
+                          name=machine_name
+                 )
+
+        enable_jit_data = open("enable_jit.json").read()
+        template = Template(enable_jit_data)
+        payload  = json.loads(template.render(data=data))
+        enable_jit_response = requests.put(enable_jit_uri, headers=headers, json=payload)
+        logging.debug(enable_jit_response.json())
+    except:
+        logging.critical("Unable to create/update JIT policy")
+        logging.error(enable_jit_response.json())
+        exit(1)
+
 else:
     exit(1)
 
-
-
-
-if enable_jit_response.status_code == 200:
+try:
     initiate_jit_data = open("initiate_jit.json",).read()
     template = Template(initiate_jit_data)
     payload  = json.loads(template.render(data=data))
@@ -115,13 +133,12 @@ if enable_jit_response.status_code == 200:
 
     initiate_jit_response = requests.post(initiate_jit_uri, headers=headers, json=payload)
     logging.debug(initiate_jit_response.json())
-else: 
-    logging.error("enable_jit_error")
-    logging.error(enable_jit_response.json())
+except:
+    logging.error("Unable to initiate JIT policy for {machine}".format(machine=machine_name))
+    logging.error(initate_jit_response.json())
     exit(1)
-
-
-if initiate_jit_response.status_code == 202:
+    
+try:
     jit_status_uri = "https://management.azure.com/subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.Security/locations/{location}/jitNetworkAccessPolicies/{name}?api-version=2020-01-01".format(
                               subscription=data['subscription_id'],
                               rg=resource_group,
@@ -130,8 +147,8 @@ if initiate_jit_response.status_code == 202:
                       )
     jit_status = requests.get(jit_status_uri, headers=headers)
     logging.debug(jit_status.json())
-else:
-    logging.critical(initiate_jit_response.json())
+except:
+    logging.critical(jit_status.text)
     exit(1)
 
 exit(0)
